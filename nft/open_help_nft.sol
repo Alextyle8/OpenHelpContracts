@@ -25,9 +25,14 @@ contract OpenHelpNFT is ERC721, ERC721URIStorage, Ownable {
         level = _level;
     }
 
+    // We have only 5 levels [0..4]
+    modifier validLevel {
+      require(level < 0 || level >= 5, "A valid level is required");
+      _;
+    }
 
-    function safeMint(address to) public onlyOwner {
-        require(level >= 0 && level <= 4, "A valid level is required");
+
+    function safeMint(address to) public onlyOwner validLevel {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
@@ -35,8 +40,9 @@ contract OpenHelpNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     // Call this function to update the level - NFT
-    function changeLevel(uint _tokenId, uint _level) public onlyOwner{
-        _setTokenURI(_tokenId, uriData[_level]);
+    function changeLevel(uint _level) public onlyOwner validLevel{
+        // allways will call the tokeId 0
+        _setTokenURI(0, uriData[_level]);
     }
 
     // The following functions are overrides required by Solidity.
