@@ -2,7 +2,17 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+    interface IOpenHelp{
+        function safeMint(address _to, uint _level) external returns (uint);
+        //function getTokenId() external returns(uint256);
+        function changeLevel(uint _tokenId, uint _level) external;
+        function getPreviewNFT() external view returns(string[5] memory);
+    }
+
+
 contract OpenHelp{
+
+    address nftContractAddress;
 
     struct UserData {
         address id;
@@ -13,19 +23,31 @@ contract OpenHelp{
 
     address payable owner;
     uint public totalAmount;
-
-    /*mapping(address => uint) userDonationAmount;
-    mapping(address => uint) userNftID;
-    mapping(address => uint8) userCategory;*/
-
     mapping(address => UserData) public userList;
     uint[] private userAmountsLevelLimits;
-    enum Category { Nivel0, Nivel1, Nivel2, Nivel3, Nivel4, Nivel5}
+    enum Category { Nivel1, Nivel2, Nivel3, Nivel4, Nivel5 }
 
-    constructor(){
+    constructor(address _nftContractAddress){
         // contract owner address
         owner =  payable(msg.sender);
         userAmountsLevelLimits = [0,10,20,30,40];
+        nftContractAddress = _nftContractAddress;
+    }
+
+    function setNftContractAddress(address _nftContractAddress) public{
+        nftContractAddress = _nftContractAddress;
+    }
+
+    function safeMint(address _to, uint _level) private  returns (uint){
+        return IOpenHelp(nftContractAddress).safeMint(_to, _level);
+    }
+
+    function changeLevel(uint _tokenId, uint _level) private{
+        IOpenHelp(nftContractAddress).changeLevel(_tokenId,_level);
+    }
+
+    function getPreviewNFT() public view returns(string[5] memory){
+        return IOpenHelp(nftContractAddress).getPreviewNFT();
     }
 
     /**
@@ -40,24 +62,18 @@ contract OpenHelp{
         Category _userNextCategory = _getCategory(_sender, msg.value);
 
         require(payable(owner).send(msg.value), "Transacction aborted.");
+        userList[_sender].donationAmount += msg.value;
+        userList[_sender].category = _userNextCategory;
+        totalAmount += msg.value;
         if(_isNewUser){
-            //Mint new NFT to _sender with category _userCategory
-            // userNftID[_sender] = ...
-            //payable(owner).transfer(msg.value);
-            totalAmount += msg.value;
+            uint idNft = safeMint(_sender,4);   //********* REVISAR ****************
             userList[_sender].id = _sender;
-            userList[_sender].donationAmount += msg.value;
-            userList[_sender].nftID = 123;
-            userList[_sender].category = _userNextCategory;
+            userList[_sender].nftID = idNft;
         }else{
             //We need to validate if user user category have changed
             if (_actualUserCategory != _userNextCategory){
-                //update NFT metadata with _userNftID
-                userList[_sender].category = _userNextCategory;
+                changeLevel(_userNftID,3);    //********* REVISAR ****************
             }
-            //payable(owner).transfer(msg.value);
-            totalAmount += msg.value;
-            userList[_sender].donationAmount += msg.value;
         }
 
     }
@@ -69,8 +85,6 @@ contract OpenHelp{
             _actualUserCategory = userList[_user].category;
         }else{
             _isNew = true;
-            _nftID = 0;
-            _actualUserCategory = Category.Nivel0;
         }
     }
 
